@@ -5,7 +5,7 @@ import pandas as pd
 from prophet import Prophet
 from datetime import datetime
 import requests
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 # import base64
 
 # ─── Import API keys from config.py ───
@@ -490,27 +490,58 @@ def live_prices():
 
         results = []
 
+        
         for item in data.get("shopping_results", [])[:6]:
-            # Prefer the URL provided by SerpAPI.
-            product_link = (
-                item.get("product_link")
-                or item.get("link")
-                or item.get("product_page_url")
-            )
+            # Check the URL fields provided by SerpAPI.
+            candidates = [
+                item.get("product_link"),
+                item.get("link"),
+                item.get("product_page_url")
+            ]
 
-            # Fallback: open a Google Shopping search for the product.
-            if not product_link:
-                search_query = item.get("title") or product
-                product_link = (
-                    "https://www.google.com/search?tbm=shop&q="
-                    + quote_plus(search_query)
-                )
+            retailer_link = None
+
+            for candidate in candidates:
+                if not candidate:
+                    continue
+
+                try:
+                    parsed = urlparse(candidate)
+                    host = (parsed.hostname or "").lower()
+
+                    # Reject Google URLs and non-HTTPS URLs.
+                    if (
+                        parsed.scheme == "https"
+                        and host
+                        and host != "google.com"
+                        and not host.endswith(".google.com")
+                        and host != "google.co.in"
+                        and not host.endswith(".google.co.in")
+                    ):
+                        retailer_link = candidate
+                        break
+
+                except (ValueError, TypeError):
+                    continue
+
+            # Fallback if SerpAPI has no usable retailer URL.
+            title = item.get("title") or product
+            shopping_link = (
+                "https://www.google.com/search?tbm=shop&q="
+                + quote_plus(title + " India")
+            )
 
             results.append({
                 "platform": item.get("source"),
-                "title": item.get("title"),
+                "title": title,
                 "price": item.get("price"),
-                "link": product_link,
+                "link": retailer_link or shopping_link,
+                "retailer_link": retailer_link,
+                "link_type": (
+                    "retailer"
+                    if retailer_link
+                    else "google_shopping"
+                ),
                 "image": item.get("thumbnail"),
                 "rating": item.get("rating"),
                 "reviews": item.get("reviews")
