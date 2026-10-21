@@ -490,16 +490,14 @@ def live_prices():
         results = []
 
         for item in data.get("shopping_results", [])[:6]:
-            # Find a direct retailer URL if SerpAPI provides one
-            product_link = item.get("link")
+            
+            # Use the available product URL, including Google Shopping URLs.
+            product_link = (
+            item.get("product_link")
+            or item.get("link")
+            or item.get("product_page_url")
+            )
 
-            if product_link and "google.com" in product_link.lower():
-                product_link = None
-
-            if not product_link:
-                candidate = item.get("product_link")
-                if candidate and "google.com" not in candidate.lower():
-                    product_link = candidate
 
             results.append({
                 "platform": item.get("source"),
