@@ -5,6 +5,7 @@ import pandas as pd
 from prophet import Prophet
 from datetime import datetime
 import requests
+from urllib.parse import quote_plus
 # import base64
 
 # ─── Import API keys from config.py ───
@@ -490,14 +491,20 @@ def live_prices():
         results = []
 
         for item in data.get("shopping_results", [])[:6]:
-            
-            # Use the available product URL, including Google Shopping URLs.
+            # Prefer the URL provided by SerpAPI.
             product_link = (
-            item.get("product_link")
-            or item.get("link")
-            or item.get("product_page_url")
+                item.get("product_link")
+                or item.get("link")
+                or item.get("product_page_url")
             )
 
+            # Fallback: open a Google Shopping search for the product.
+            if not product_link:
+                search_query = item.get("title") or product
+                product_link = (
+                    "https://www.google.com/search?tbm=shop&q="
+                    + quote_plus(search_query)
+                )
 
             results.append({
                 "platform": item.get("source"),
