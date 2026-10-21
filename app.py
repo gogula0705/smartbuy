@@ -19,8 +19,7 @@ import os
 SERP_API_KEY = os.environ.get("SERP_API_KEY")
 
 # Initialize the new Gemini SDK
-client = genai.Client(api_key=GEMINI_API_KEY)
-
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
@@ -414,6 +413,11 @@ def detect_product():
             "'boAt Rockerz 450', or 'iPhone 15 128GB'. "
             "If you cannot identify a product, say 'Unknown Product'."
         )
+
+        if client is None:
+            return jsonify({
+                "error": "Gemini feature is unavailable because no Gemini API key is configured."
+            }), 503
 
         response = client.models.generate_content(
             model="gemini-flash-latest",
