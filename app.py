@@ -479,6 +479,12 @@ def live_prices():
 
         response.raise_for_status()
         data = response.json()
+        app.logger.info(
+            "SerpAPI first shopping result: %s",
+            data.get("shopping_results", [{}])[0]
+            if data.get("shopping_results")
+            else "No shopping results"
+        )
 
         app.logger.info(
             "SerpAPI first shopping result: %s",
