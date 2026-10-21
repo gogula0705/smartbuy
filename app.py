@@ -5,13 +5,21 @@ import pandas as pd
 from prophet import Prophet
 from datetime import datetime
 import requests
-import base64
+# import base64
 
 # ─── Import API keys from config.py ───
-from config import GEMINI_API_KEY, SERP_API_KEY
+import os
 
-import google.generativeai as genai
-genai.configure(api_key=GEMINI_API_KEY)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+SERP_API_KEY = os.environ.get("SERP_API_KEY")
+from google import genai
+from google.genai import types
+import os
+
+SERP_API_KEY = os.environ.get("SERP_API_KEY")
+
+# Initialize the new Gemini SDK
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -382,36 +390,43 @@ def get_sale():
     return jsonify(get_upcoming_sale())
 
 
+
 # ═══════════════════════════════════════════════
 # ROUTE 6 — GEMINI VISION: Detect product from image
 # ═══════════════════════════════════════════════
 @app.route('/detect', methods=['POST'])
 def detect_product():
     if 'image' not in request.files:
-        return jsonify({"error": "No image uploaded. Send image as form-data with key 'image'"}), 400
+        return jsonify({
+            "error": "No image uploaded. Send image as form-data with key 'image'"
+        }), 400
 
     try:
-        image_file  = request.files['image']
-        image_data  = base64.b64encode(image_file.read()).decode('utf-8')
-        mime_type   = image_file.content_type or 'image/jpeg'
+        image_file = request.files['image']
+        image_data = image_file.read()
+        mime_type = image_file.content_type or 'image/jpeg'
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = (
+            "Look at this image carefully. "
+            "What exact product is shown? "
+            "Give me ONLY the product brand and model name, nothing else. "
+            "Example outputs: 'Nike Air Max 270', "
+            "'boAt Rockerz 450', or 'iPhone 15 128GB'. "
+            "If you cannot identify a product, say 'Unknown Product'."
+        )
 
-        response = model.generate_content([
-            {
-                "mime_type": mime_type,
-                "data": image_data
-            },
-            (
-                "Look at this image carefully. "
-                "What exact product is shown? "
-                "Give me ONLY the product brand and model name, nothing else. "
-                "Example outputs: 'Nike Air Max 270' or 'boAt Rockerz 450' or 'iPhone 15 128GB'. "
-                "If you cannot identify a product, say 'Unknown Product'."
-            )
-        ])
+        response = client.models.generate_content(
+            model="gemini-flash-latest",
+            contents=[
+                types.Part.from_bytes(
+                    data=image_data,
+                    mime_type=mime_type
+                ),
+                prompt
+            ]
+        )
 
-        product_name = response.text.strip()
+        product_name = (response.text or "").strip()
 
         matched = None
         for key in platform_prices:
@@ -421,57 +436,100 @@ def detect_product():
 
         return jsonify({
             "detected_product": product_name,
-            "matched_key":      matched,
-            "status":           "success"
+            "matched_key": matched,
+            "status": "success"
         })
 
     except Exception as e:
+        app.logger.exception("Product image detection failed")
         return jsonify({"error": str(e)}), 500
 
-
-# ═══════════════════════════════════════════════
 # ROUTE 7 — SERPAPI: Live prices from Google Shopping
-# ═══════════════════════════════════════════════
 @app.route('/liveprices', methods=['GET'])
 def live_prices():
-    product = request.args.get('product', '')
+    product = request.args.get('product', '').strip()
 
     if not product:
-        return jsonify({"error": "Send product name as ?product="}), 400
+        return jsonify({
+            "error": "Send product name as ?product="
+        }), 400
 
     try:
         url = "https://serpapi.com/search"
+
         params = {
-            "engine":   "google_shopping",
-            "q":        product + " India",
+            "engine": "google_shopping",
+            "q": product + " India",
             "location": "India",
-            "gl":       "in",
-            "hl":       "en",
-            "api_key":  SERP_API_KEY
+            "gl": "in",
+            "hl": "en",
+            "api_key": SERP_API_KEY
         }
 
-        response = requests.get(url, params=params, timeout=10)
-        data     = response.json()
+        response = requests.get(
+            url,
+            params=params,
+            timeout=20
+        )
+
+        response.raise_for_status()
+        data = response.json()
+
+        # Handle errors returned by SerpAPI
+        if data.get("error"):
+            return jsonify({
+                "product": product,
+                "live_results": [],
+                "error": data["error"]
+            }), 502
 
         results = []
+
         for item in data.get("shopping_results", [])[:6]:
+            # Find a direct retailer URL if SerpAPI provides one
+            product_link = item.get("link")
+
+            if product_link and "google.com" in product_link.lower():
+                product_link = None
+
+            if not product_link:
+                candidate = item.get("product_link")
+                if candidate and "google.com" not in candidate.lower():
+                    product_link = candidate
+
             results.append({
                 "platform": item.get("source"),
-                "price":    item.get("price"),
-                "link":     item.get("link"),
-                "image":    item.get("thumbnail"),
-                "rating":   item.get("rating"),
-                "reviews":  item.get("reviews")
+                "title": item.get("title"),
+                "price": item.get("price"),
+                "link": product_link,
+                "image": item.get("thumbnail"),
+                "rating": item.get("rating"),
+                "reviews": item.get("reviews")
             })
 
         return jsonify({
-            "product":      product,
-            "live_results": results
+            "product": product,
+            "live_results": results,
+            "result_count": len(results),
+            "source": "SerpAPI Google Shopping"
         })
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": "SerpAPI request timed out. Please try again."
+        }), 504
 
+    except requests.exceptions.RequestException as e:
+        app.logger.error("SerpAPI request failed: %s", e)
+        return jsonify({
+            "error": "Unable to retrieve live prices from SerpAPI."
+        }), 502
+
+    except Exception:
+        app.logger.exception("Live price lookup failed")
+        return jsonify({
+            "error": "An unexpected error occurred while retrieving prices."
+        }), 500
 
 # ═══════════════════════════════════════════════
 # ROUTE 8 — SERPAPI: Live alternatives
