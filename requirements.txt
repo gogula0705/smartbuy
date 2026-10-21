@@ -3,3 +3,6 @@ flask-cors
 requests
 gunicorn
 pandas
+prophet
+plotly
+google-genai
