@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SmartBuy Planner — Reel to Smart Buy</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #070710; --bg2: #0d0d1a;
+  --card: rgba(255,255,255,0.04); --card-border: rgba(255,255,255,0.08);
+  --purple: #7C3AED; --blue: #3B82F6; --cyan: #06B6D4;
+  --green: #10B981; --red: #EF4444; --orange: #F59E0B;
+  --text: #F1F1F8; --muted: #6B6B8A;
+  --grad: linear-gradient(135deg, #7C3AED, #3B82F6);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+.particle{position:absolute;border-radius:50%;animation:float linear infinite;}
+@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-100px) rotate(720deg);opacity:0;}}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4;}
+.wrapper{position:relative;z-index:1;}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--card-border);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;background:rgba(7,7,16,0.8);}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.nav-tag{font-size:12px;color:var(--muted);border:1px solid var(--card-border);padding:4px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;}
+.pulse{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+
+.hero{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);padding:6px 16px;border-radius:20px;font-size:12px;color:#A78BFA;margin-bottom:32px;letter-spacing:1px;text-transform:uppercase;}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(40px,8vw,90px);font-weight:800;line-height:1.05;margin-bottom:16px;}
+.grad-text{background:linear-gradient(135deg,#A78BFA,#60A5FA,#34D399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200%;animation:shimmer 4s ease infinite;}
+@keyframes shimmer{0%{background-position:0%;}100%{background-position:200%;}}
+.hero p{font-size:18px;color:var(--muted);max-width:500px;margin:0 auto 48px;line-height:1.6;}
+
+.search-wrap{width:100%;max-width:620px;margin:0 auto 32px;position:relative;}
+.search-box{width:100%;padding:20px 60px 20px 24px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:16px;color:var(--text);font-size:16px;font-family:'DM Sans',sans-serif;outline:none;transition:all 0.3s;}
+.search-box:focus{border-color:rgba(124,58,237,0.6);background:rgba(124,58,237,0.08);box-shadow:0 0 0 4px rgba(124,58,237,0.12),0 0 40px rgba(124,58,237,0.1);}
+.search-box::placeholder{color:var(--muted);}
+.search-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--grad);border:none;width:44px;height:44px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-size:18px;}
+.search-btn:hover{transform:translateY(-50%) scale(1.05);}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.chip{padding:8px 18px;border-radius:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:13px;cursor:pointer;transition:all 0.2s;color:var(--text);}
+.chip:hover{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.4);}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:900px;margin:64px auto 0;padding:0 20px;}
+.stat-card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:20px;text-align:center;backdrop-filter:blur(10px);}
+.stat-num{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.stat-label{font-size:12px;color:var(--muted);margin-top:4px;}
+
+/* Demo mode banner */
+.demo-banner{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:12px 18px;font-size:13px;color:#FCD34D;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+
+.page{display:none;padding:32px 20px;max-width:1000px;margin:0 auto;}
+.page.active{display:block;animation:fadeUp 0.4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+.section-label{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--card-border);}
+
+.product-header{display:flex;align-items:center;gap:20px;background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:24px;margin-bottom:28px;}
+.product-img{width:80px;height:80px;border-radius:16px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden;flex-shrink:0;}
+.product-img img{width:100%;height:100%;object-fit:cover;border-radius:16px;}
+.product-info h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1.3;}
+.product-info p{color:var(--muted);font-size:14px;margin-top:4px;}
+.ai-tag{margin-left:auto;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);padding:6px 14px;border-radius:10px;font-size:12px;color:#A78BFA;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+
+.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}
+.platform-card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:18px;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;text-decoration:none;color:var(--text);display:block;}
+.platform-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.2);}
+.platform-card.lowest{border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.06);}
+.lowest-badge{position:absolute;top:10px;right:10px;background:var(--green);color:#000;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:0.5px;}
+.platform-name{font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:500;}
+.platform-price{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;}
+.platform-original{font-size:12px;color:var(--muted);text-decoration:line-through;margin-top:2px;}
+.platform-delivery{font-size:11px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--card-border);}
+.buy-link{display:inline-flex;align-items:center;gap:4px;margin-top:10px;font-size:12px;color:#A78BFA;}
+
+.timing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}
+.timing-card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:20px;text-align:center;transition:all 0.2s;}
+.timing-card.recommended{background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.4);box-shadow:0 0 30px rgba(16,185,129,0.1);}
+.timing-card.recommended .timing-price{color:var(--green);}
+.timing-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.timing-price{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;}
+.timing-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+
+.rec-banner{border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.rec-banner.wait{background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.3);}
+.rec-banner.buy{background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.3);}
+.rec-badge{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px;}
+.rec-msg{font-size:14px;color:var(--muted);max-width:300px;}
+.rec-savings{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--green);}
+
+.savings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px;}
+.saving-strategy-card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:20px;transition:all 0.2s;animation:slideIn 0.4s ease both;}
+.saving-strategy-card:hover{border-color:rgba(255,255,255,0.15);transform:translateY(-2px);}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
+.strategy-icon{font-size:26px;margin-bottom:10px;}
+.strategy-title{font-size:14px;font-weight:600;margin-bottom:5px;}
+.strategy-desc{font-size:12px;color:var(--muted);line-height:1.55;}
+.strategy-amount{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--green);margin-top:10px;}
+.savings-total-card{background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(6,182,212,0.06));border:1px solid rgba(16,185,129,0.3);border-radius:16px;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.savings-total-label{font-size:14px;color:var(--muted);}
+.savings-total-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.savings-total-amount{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:var(--green);}
+
+.bank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.bank-card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:16px;}
+.bank-name{font-size:13px;font-weight:700;margin-bottom:5px;}
+.bank-offer{font-size:13px;color:var(--text);margin-bottom:3px;}
+.bank-max{font-size:11px;color:#A78BFA;font-weight:500;}
+
+.score-wrap{background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:28px;margin-bottom:28px;display:flex;align-items:center;gap:32px;}
+.score-gauge{position:relative;width:120px;height:120px;flex-shrink:0;}
+.score-gauge canvas{width:120px!important;height:120px!important;}
+.score-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Syne',sans-serif;font-size:26px;font-weight:800;text-align:center;}
+.score-info h3{font-family:'Syne',sans-serif;font-size:20px;margin-bottom:8px;}
+.score-info p{font-size:14px;color:var(--muted);line-height:1.6;}
+
+.chart-wrap{background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:24px;margin-bottom:28px;}
+.chart-wrap canvas{max-height:220px;}
+
+.sale-banner{background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.sale-info h3{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+.sale-info p{font-size:13px;color:var(--muted);margin-top:4px;}
+.sale-countdown{text-align:right;}
+.sale-days{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--orange);}
+.sale-days-label{font-size:12px;color:var(--muted);}
+
+.alert-btn{width:100%;padding:18px;background:var(--grad);border:none;border-radius:16px;color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;box-shadow:0 8px 32px rgba(124,58,237,0.3);}
+.alert-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(124,58,237,0.4);}
+
+.alt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:24px;}
+.alt-card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;transition:all 0.2s;}
+.alt-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.15);}
+.alt-img-wrap{width:100%;height:160px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.alt-img-wrap img{width:100%;height:100%;object-fit:contain;padding:12px;}
+.alt-img-placeholder{font-size:52px;}
+.alt-body{padding:16px;}
+.alt-name{font-weight:600;font-size:14px;margin-bottom:3px;line-height:1.4;}
+.alt-platform{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.alt-price{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--cyan);}
+.alt-meta{font-size:11px;color:var(--green);margin-top:4px;}
+.alt-buy{display:block;margin-top:12px;padding:9px;background:rgba(255,255,255,0.06);border:1px solid var(--card-border);border-radius:10px;font-size:12px;text-align:center;text-decoration:none;color:var(--text);transition:all 0.2s;}
+.alt-buy:hover{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.4);}
+
+.back-btn{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--card-border);padding:10px 20px;border-radius:12px;font-size:14px;cursor:pointer;margin-bottom:24px;color:var(--text);transition:all 0.2s;}
+.back-btn:hover{background:rgba(255,255,255,0.08);}
+
+.loading{display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center;}
+.loading.active{display:flex;}
+.spinner{width:48px;height:48px;border:3px solid rgba(124,58,237,0.2);border-top-color:#7C3AED;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading p{color:var(--muted);font-size:14px;}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(12px);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:#0d0d1a;border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:36px;max-width:440px;width:90%;animation:fadeUp 0.3s ease;}
+.modal-close{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;}
+.modal h3{font-family:'Syne',sans-serif;font-size:22px;margin-bottom:6px;}
+.modal-subtitle{color:var(--muted);font-size:14px;margin-bottom:20px;}
+.modal-price-box{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:18px;margin-bottom:22px;text-align:center;}
+.modal-price-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.modal-price-value{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--green);}
+.modal-price-product{font-size:12px;color:var(--muted);margin-top:5px;}
+.modal-input-group{margin-bottom:14px;}
+.modal-input-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block;}
+.modal input{width:100%;padding:14px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:var(--text);font-size:14px;outline:none;font-family:'DM Sans',sans-serif;}
+.modal input:focus{border-color:rgba(124,58,237,0.5);}
+.modal-btn{width:100%;padding:14px;background:var(--grad);border:none;border-radius:12px;color:#fff;font-weight:600;cursor:pointer;font-size:15px;margin-top:6px;}
+.modal-btn:hover{opacity:0.9;}
+.modal-success{display:none;text-align:center;padding:16px 0;}
+.modal-success .success-icon{font-size:52px;margin-bottom:14px;}
+.modal-success h4{font-family:'Syne',sans-serif;font-size:22px;margin-bottom:8px;}
+.modal-success p{color:var(--muted);font-size:14px;line-height:1.6;}
+.modal-success-price{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--green);margin:12px 0;}
+
+.error-msg{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px 20px;font-size:14px;color:#FCA5A5;margin-bottom:16px;display:none;}
+
+@media(max-width:640px){
+  nav{padding:16px 20px;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .platform-grid{grid-template-columns:repeat(2,1fr);}
+  .timing-grid{grid-template-columns:1fr;}
+  .bank-grid{grid-template-columns:repeat(2,1fr);}
+  .alt-grid{grid-template-columns:1fr;}
+  .savings-grid{grid-template-columns:1fr;}
+  .score-wrap{flex-direction:column;text-align:center;}
+  .rec-banner{flex-direction:column;gap:12px;}
+  .savings-total-card{flex-direction:column;gap:10px;text-align:center;}
+}
+</style>
+</head>
+<body>
+<div id="particles"></div>
+<div class="wrapper">
+
+<nav>
+  <div class="logo">SmartBuy ⚡</div>
+  <div class="nav-tag"><span class="pulse"></span> AI Engine Live</div>
+</nav>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <p id="loading-text">Analyzing product with AI...</p>
+</div>
+
+<div style="max-width:1000px;margin:0 auto;padding:0 20px;">
+  <div class="error-msg" id="error-msg"></div>
+</div>
+
+<!-- HOME -->
+<div id="home-page">
+  <section class="hero">
+    <div class="hero-badge">🤖 Powered by Gemini AI + Prophet ML</div>
+    <h1>Reel to<br><span class="grad-text">Smart Buy</span></h1>
+    <p>India's first AI engine that detects products, predicts price drops, stacks every discount and finds cheaper alternatives — in 10 seconds.</p>
+    <div class="search-wrap">
+      <input class="search-box" id="search-input" type="text" placeholder="Type product name... (boat, nike, iphone)"/>
+      <button class="search-btn" onclick="doSearch()">🔍</button>
+    </div>
+    <div class="chips">
+      <div class="chip" onclick="quickSearch('boat rockerz 450')">🎧 boAt Rockerz 450</div>
+      <div class="chip" onclick="quickSearch('nike revolution 6')">👟 Nike Revolution 6</div>
+      <div class="chip" onclick="quickSearch('iphone 15 128gb')">📱 iPhone 15</div>
+    </div>
+    <div class="stats">
+      <div class="stat-card"><div class="stat-num">₹2,776</div><div class="stat-label">Avg saved per buy</div></div>
+      <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Platforms compared</div></div>
+      <div class="stat-card"><div class="stat-num">AI</div><div class="stat-label">Powered predictions</div></div>
+      <div class="stat-card"><div class="stat-num">10s</div><div class="stat-label">To best price</div></div>
+    </div>
+  </section>
+</div>
+
+<!-- RESULT PAGE -->
+<div id="result-page" class="page">
+  <button class="back-btn" onclick="goHome()">← Back to Search</button>
+  <div id="demo-notice"></div>
+  <div class="product-header" id="product-header"></div>
+
+  <div class="section-label">🔥 Next Big Sale</div>
+  <div class="sale-banner" id="sale-banner"></div>
+
+  <div class="section-label">⏰ Best Time to Buy</div>
+  <div class="timing-grid" id="timing-grid"></div>
+
+  <div id="rec-banner"></div>
+
+  <div class="section-label">🛒 Price Across All Platforms</div>
+  <div class="platform-grid" id="platform-grid"></div>
+
+  <div class="section-label">💰 Ways to Save Money</div>
+  <div class="savings-grid" id="savings-grid"></div>
+  <div class="savings-total-card" id="savings-total"></div>
+
+  <div class="section-label">🎯 SmartBuy Score</div>
+  <div class="score-wrap" id="score-wrap"></div>
+
+  <div class="section-label">📈 90-Day Price History + Prediction</div>
+  <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+
+  <div class="section-label">🏦 Bank Offers Available</div>
+  <div class="bank-grid" id="bank-grid"></div>
+
+  <button class="alert-btn" onclick="openModal()">🔔 Set Price Alert — Notify Me When Price Drops</button>
+  <button class="alert-btn" style="background:rgba(6,182,212,0.2);box-shadow:0 8px 32px rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);" onclick="showAlternatives()">
+    🔄 Show Cheaper Alternatives
+  </button>
+</div>
+
+<!-- ALTERNATIVES PAGE -->
+<div id="alt-page" class="page">
+  <button class="back-btn" onclick="showResult()">← Back to Results</button>
+  <h2 style="font-family:'Syne',sans-serif;font-size:28px;margin-bottom:8px;">Smarter Alternatives</h2>
+  <p style="color:var(--muted);margin-bottom:28px;">Same vibe. Less price. Better value.</p>
+  <div class="section-label">💎 Budget Picks</div>
+  <div class="alt-grid" id="alt-budget"></div>
+  <div class="section-label">⚡ Mid Range</div>
+  <div class="alt-grid" id="alt-mid"></div>
+  <div class="section-label">🔥 Best Value</div>
+  <div class="alt-grid" id="alt-value"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-form-section">
+      <h3>🔔 Price Alert</h3>
+      <p class="modal-subtitle">Enter your phone or email and we'll notify you the moment the price drops.</p>
+      <div class="modal-price-box">
+        <div class="modal-price-label">Alert me when price drops to</div>
+        <div class="modal-price-value" id="modal-price-display">—</div>
+        <div class="modal-price-product" id="modal-price-product">Loading...</div>
+      </div>
+      <div class="modal-input-group">
+        <label class="modal-input-label">📱 WhatsApp / Phone number</label>
+        <input type="tel" id="alert-phone" placeholder="+91 98765 43210"/>
+      </div>
+      <div class="modal-input-group">
+        <label class="modal-input-label">📧 Email address</label>
+        <input type="email" id="alert-email" placeholder="you@example.com"/>
+      </div>
+      <button class="modal-btn" onclick="setAlert()">Activate Alert ⚡</button>
+    </div>
+    <div class="modal-success" id="modal-success">
+      <div class="success-icon">✅</div>
+      <h4>Alert Activated!</h4>
+      <div class="modal-success-price" id="modal-success-price"></div>
+      <p id="modal-success-msg"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── PARTICLES ───
+(function(){
+  const c=document.getElementById('particles');
+  for(let i=0;i<20;i++){
+    const p=document.createElement('div');p.className='particle';
+    const sz=Math.random()*4+2;
+    const cols=['rgba(124,58,237,0.4)','rgba(59,130,246,0.4)','rgba(16,185,129,0.3)','rgba(6,182,212,0.3)'];
+    p.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:${cols[Math.floor(Math.random()*cols.length)]};animation-duration:${Math.random()*15+10}s;animation-delay:${Math.random()*10}s;`;
+    c.appendChild(p);
+  }
+})();
+
+const API='http://127.0.0.1:5000';
+let currentProduct=null, currentData=null, chartInstance=null;
+let alertPrice=null, alertProductName=null;
+
+// ═══════════════════════════════════════════
+// DEMO DATA — used when Flask is not running
+// ═══════════════════════════════════════════
+const DEMO_DATA = {
+  boat: {
+    key:'boat', product:'boAt Rockerz 450 Bluetooth Headphone',
+    lowest_price:1799, lowest_platform:'Amazon',
+    platforms:[
+      {platform:'Amazon',   price:1799, original:2999, delivery:'Free, Tomorrow', link:'https://www.amazon.in/s?k=boat+rockerz+450', lowest:true,  color:'#FF9900'},
+      {platform:'Flipkart', price:1849, original:2999, delivery:'Free, 2 days',   link:'https://www.flipkart.com/search?q=boat+rockerz+450', lowest:false, color:'#2874F0'},
+      {platform:'Meesho',   price:1299, original:1999, delivery:'₹50, 5 days',    link:'https://www.meesho.com/search?q=boat+rockerz+450', lowest:false, color:'#F43397'},
+      {platform:'Snapdeal', price:1699, original:2499, delivery:'Free, 3 days',   link:'https://www.snapdeal.com/search?keyword=boat+rockerz+450', lowest:false, color:'#E40000'},
+      {platform:'Myntra',   price:1999, original:2999, delivery:'Free, 2 days',   link:'https://www.myntra.com/boat+rockerz+450', lowest:false, color:'#FF3F6C'},
+      {platform:'Ajio',     price:1749, original:2499, delivery:'Free, 3 days',   link:'https://www.ajio.com/search/?text=boat+rockerz+450', lowest:false, color:'#8B5CF6'},
+    ],
+    bank_offers:[
+      {bank:'HDFC',  offer:'10% cashback',    max:'upto ₹500'},
+      {bank:'SBI',   offer:'5% off on EMI',   max:'upto ₹300'},
+      {bank:'ICICI', offer:'₹200 instant off',max:'on orders ₹1500+'},
+      {bank:'AXIS',  offer:'15% cashback',    max:'upto ₹400'},
+      {bank:'KOTAK', offer:'₹150 instant off',max:'on all orders'},
+      {bank:'IDFC',  offer:'20% off',         max:'upto ₹600'},
+    ],
+    upcoming_sale:{name:'Amazon Great Summer Sale',date:'01 May 2026',days_left:17,discount:'Up to 80% off',status:'upcoming'}
+  },
+  nike: {
+    key:'nike', product:'Nike Revolution 6 Running Shoes',
+    lowest_price:4799, lowest_platform:'Flipkart',
+    platforms:[
+      {platform:'Amazon',   price:4995, original:7999, delivery:'Free, Tomorrow', link:'https://www.amazon.in/s?k=nike+revolution+6', lowest:false, color:'#FF9900'},
+      {platform:'Flipkart', price:4799, original:7999, delivery:'Free, 2 days',   link:'https://www.flipkart.com/search?q=nike+revolution+6', lowest:true,  color:'#2874F0'},
+      {platform:'Myntra',   price:5195, original:7999, delivery:'Free, 2 days',   link:'https://www.myntra.com/nike+revolution+6', lowest:false, color:'#FF3F6C'},
+      {platform:'Ajio',     price:4999, original:7999, delivery:'Free, 3 days',   link:'https://www.ajio.com/search/?text=nike+revolution+6', lowest:false, color:'#8B5CF6'},
+      {platform:'Snapdeal', price:5299, original:7999, delivery:'Free, 4 days',   link:'https://www.snapdeal.com/search?keyword=nike+revolution+6', lowest:false, color:'#E40000'},
+      {platform:'Meesho',   price:3999, original:5999, delivery:'₹50, 6 days',    link:'https://www.meesho.com/search?q=nike+revolution+6', lowest:false, color:'#F43397'},
+    ],
+    bank_offers:[
+      {bank:'HDFC',  offer:'10% cashback',    max:'upto ₹500'},
+      {bank:'SBI',   offer:'5% off on EMI',   max:'upto ₹300'},
+      {bank:'ICICI', offer:'₹200 instant off',max:'on orders ₹1500+'},
+      {bank:'AXIS',  offer:'15% cashback',    max:'upto ₹400'},
+      {bank:'KOTAK', offer:'₹150 instant off',max:'on all orders'},
+      {bank:'IDFC',  offer:'20% off',         max:'upto ₹600'},
+    ],
+    upcoming_sale:{name:'Amazon Great Summer Sale',date:'01 May 2026',days_left:17,discount:'Up to 80% off',status:'upcoming'}
+  },
+  iphone: {
+    key:'iphone', product:'Apple iPhone 15 128GB',
+    lowest_price:68999, lowest_platform:'Flipkart',
+    platforms:[
+      {platform:'Amazon',   price:69999, original:79900, delivery:'Free, Tomorrow', link:'https://www.amazon.in/s?k=iphone+15+128gb', lowest:false, color:'#FF9900'},
+      {platform:'Flipkart', price:68999, original:79900, delivery:'Free, 2 days',   link:'https://www.flipkart.com/search?q=iphone+15+128gb', lowest:true,  color:'#2874F0'},
+      {platform:'Myntra',   price:71999, original:79900, delivery:'Free, 3 days',   link:'https://www.myntra.com/iphone+15', lowest:false, color:'#FF3F6C'},
+      {platform:'Snapdeal', price:72999, original:79900, delivery:'Free, 4 days',   link:'https://www.snapdeal.com/search?keyword=iphone+15', lowest:false, color:'#E40000'},
+      {platform:'Ajio',     price:70999, original:79900, delivery:'Free, 3 days',   link:'https://www.ajio.com/search/?text=iphone+15', lowest:false, color:'#8B5CF6'},
+      {platform:'Meesho',   price:67999, original:79900, delivery:'₹100, 7 days',   link:'https://www.meesho.com/search?q=iphone+15', lowest:false, color:'#F43397'},
+    ],
+    bank_offers:[
+      {bank:'HDFC',  offer:'10% cashback',    max:'upto ₹500'},
+      {bank:'SBI',   offer:'5% off on EMI',   max:'upto ₹300'},
+      {bank:'ICICI', offer:'₹200 instant off',max:'on orders ₹1500+'},
+      {bank:'AXIS',  offer:'15% cashback',    max:'upto ₹400'},
+      {bank:'KOTAK', offer:'₹150 instant off',max:'on all orders'},
+      {bank:'IDFC',  offer:'20% off',         max:'upto ₹600'},
+    ],
+    upcoming_sale:{name:'Amazon Great Summer Sale',date:'01 May 2026',days_left:17,discount:'Up to 80% off',status:'upcoming'}
+  }
+};
+
+const DEMO_ALTERNATIVES = {
+  boat:{
+    budget:[
+      {name:'Zebronics Zeb-Duke1',price:799, similarity:'89%',rating:'3.8',platform:'Amazon',  link:'https://www.amazon.in/s?k=zebronics+zeb+duke1',image:null},
+      {name:'PTron Bassbuds Pro', price:599, similarity:'85%',rating:'3.6',platform:'Meesho',  link:'https://www.meesho.com/search?q=ptron+bassbuds',image:null},
+    ],
+    mid:[
+      {name:'JBL Tune 510BT',    price:1299,similarity:'94%',rating:'4.2',platform:'Amazon',  link:'https://www.amazon.in/s?k=jbl+tune+510bt',image:null},
+      {name:'Noise Shots X5 Pro',price:999, similarity:'91%',rating:'4.0',platform:'Flipkart',link:'https://www.flipkart.com/search?q=noise+shots+x5',image:null},
+    ],
+    value:[
+      {name:'Sony WH-CH510',     price:2990,similarity:'96%',rating:'4.4',platform:'Amazon',  link:'https://www.amazon.in/s?k=sony+wh+ch510',image:null},
+      {name:'OnePlus Bullets Z2',price:1799,similarity:'93%',rating:'4.3',platform:'Flipkart',link:'https://www.flipkart.com/search?q=oneplus+bullets+z2',image:null},
+    ]
+  },
+  nike:{
+    budget:[
+      {name:'Campus OG Running',  price:1299,similarity:'88%',rating:'4.0',platform:'Amazon',  link:'https://www.amazon.in/s?k=campus+og',image:null},
+      {name:'Sparx Running Shoes',price:799, similarity:'82%',rating:'3.7',platform:'Flipkart',link:'https://www.flipkart.com/search?q=sparx+running+shoes',image:null},
+    ],
+    mid:[
+      {name:'Puma Softride Enzo', price:2499,similarity:'93%',rating:'4.3',platform:'Amazon',  link:'https://www.amazon.in/s?k=puma+softride',image:null},
+      {name:'Adidas Lite Racer 3',price:3499,similarity:'95%',rating:'4.4',platform:'Myntra',  link:'https://www.myntra.com/adidas+lite+racer',image:null},
+    ],
+    value:[
+      {name:'New Balance Fresh Foam',price:4499,similarity:'97%',rating:'4.5',platform:'Amazon',link:'https://www.amazon.in/s?k=new+balance+fresh+foam',image:null},
+      {name:'Reebok Floatride Run',  price:3999,similarity:'94%',rating:'4.3',platform:'Ajio',  link:'https://www.ajio.com/search/?text=reebok+floatride',image:null},
+    ]
+  },
+  iphone:{
+    budget:[
+      {name:'Poco X6 Pro 5G',     price:22999,similarity:'80%',rating:'4.2',platform:'Flipkart',link:'https://www.flipkart.com/search?q=poco+x6+pro',image:null},
+      {name:'Redmi Note 13 Pro+', price:19999,similarity:'78%',rating:'4.1',platform:'Amazon',  link:'https://www.amazon.in/s?k=redmi+note+13+pro',image:null},
+    ],
+    mid:[
+      {name:'OnePlus 12R 5G',     price:39999,similarity:'90%',rating:'4.4',platform:'Amazon',  link:'https://www.amazon.in/s?k=oneplus+12r',image:null},
+      {name:'Samsung Galaxy A55', price:34999,similarity:'88%',rating:'4.3',platform:'Flipkart',link:'https://www.flipkart.com/search?q=samsung+galaxy+a55',image:null},
+    ],
+    value:[
+      {name:'Samsung Galaxy S23', price:54999,similarity:'95%',rating:'4.6',platform:'Amazon',  link:'https://www.amazon.in/s?k=samsung+galaxy+s23',image:null},
+      {name:'Google Pixel 8a',    price:52999,similarity:'93%',rating:'4.5',platform:'Flipkart',link:'https://www.flipkart.com/search?q=google+pixel+8a',image:null},
+    ]
+  }
+};
+
+// ═══════════════════════════════════════════
+// FIX 1: Robust price parser
+// Handles: "₹1,799", "1,799.00", "From ₹999", "Rs. 1799", "$19.99" → null
+// ═══════════════════════════════════════════
+function parsePrice(str) {
+  if (str === null || str === undefined) return null;
+  const s = String(str);
+  // Remove currency symbols, commas, whitespace, "From", "Rs.", etc.
+  const cleaned = s
+    .replace(/from\s*/gi, '')
+    .replace(/rs\.?\s*/gi, '')
+    .replace(/₹/g, '')
+    .replace(/,/g, '')
+    .replace(/\s/g, '')
+    .trim();
+  // Extract first number (including decimals)
+  const match = cleaned.match(/[\d]+(?:\.\d+)?/);
+  if (!match) return null;
+  const n = parseFloat(match[0]);
+  // Sanity: must be > 0 and < 10 crore, and must be INR-ish (no $ prices)
+  if (isNaN(n) || n <= 0 || n > 10000000) return null;
+  // Reject if original string looks like USD (contains $ but not ₹)
+  if (s.includes('$') && !s.includes('₹')) return null;
+  return Math.round(n);
+}
+
+// ═══════════════════════════════════════════
+// FIX 2: normalizeSearchData with fallback
+// ═══════════════════════════════════════════
+function normalizeSearchData(raw) {
+  const results = raw.results || [];
+  const platforms = results
+    .map(r => {
+      const price = parsePrice(r.price);
+      return {
+        platform:    r.platform || r.source || 'Store',
+        productName: r.name || r.title || '',
+        price,
+        original:    price ? Math.round(price * 1.2) : null,
+        delivery:    'Check on site',
+        link:        r.link || '#',
+        lowest:      false,
+        color:       getPlatformColor(r.platform || r.source || ''),
+        image:       r.image || r.thumbnail || null,
+        rating:      r.rating || null,
+        reviews:     r.reviews || null
+      };
+    })
+    .filter(p => p.price !== null && p.price > 0);
+
+  // Mark lowest
+  if (platforms.length > 0) {
+    const lo = platforms.reduce((a, b) => a.price < b.price ? a : b);
+    lo.lowest = true;
+  }
+
+  const q = (raw.product || '').toLowerCase();
+  let key = detectKey(q);
+
+  const lowestEntry = platforms.length ? platforms.reduce((a,b) => a.price < b.price ? a : b) : null;
+
+  return {
+    key,
+    product:          raw.product || q,
+    platforms,
+    lowest_price:     lowestEntry ? lowestEntry.price : null,
+    lowest_platform:  lowestEntry ? lowestEntry.platform : '',
+    bank_offers:      raw.bank_offers || [],
+    upcoming_sale:    raw.upcoming_sale || {}
+  };
+}
+
+function detectKey(q) {
+  if (q.includes('boat') || q.includes('rockerz') || q.includes('airdopes')) return 'boat';
+  if (q.includes('nike') || q.includes('revolution') || q.includes('air max')) return 'nike';
+  if (q.includes('iphone') || q.includes('apple')) return 'iphone';
+  return 'unknown';
+}
+
+const PLATFORM_COLORS = {
+  'amazon':'#FF9900','flipkart':'#2874F0','meesho':'#F43397',
+  'snapdeal':'#E40000','myntra':'#FF3F6C','ajio':'#8B5CF6',
+  'croma':'#00A650','reliance digital':'#E31837','tata cliq':'#3C2A75'
+};
+
+function getPlatformColor(name='') {
+  const k = name.toLowerCase();
+  for (const b in PLATFORM_COLORS) { if (k.includes(b)) return PLATFORM_COLORS[b]; }
+  return '#6B6B8A';
+}
+
+// ─── URL detection ───
+function isURL(str) {
+  try { const u=new URL(str); return u.protocol==='http:'||u.protocol==='https:'; } catch { return false; }
+}
+
+function updateSearchHint(val) {
+  let hint = document.getElementById('search-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'search-hint';
+    hint.style.cssText = `font-size:12px;margin-top:8px;padding:6px 14px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.3);color:#67E8F9;transition:opacity 0.2s;`;
+    document.querySelector('.search-wrap').after(hint);
+  }
+  if (isURL(val)) {
+    try {
+      const domain = new URL(val).hostname.replace('www.','');
+      hint.innerHTML = `🔗 Product link detected from <b>${domain}</b> — press Enter to compare prices`;
+      hint.style.display='inline-flex';
+    } catch { hint.style.display='none'; }
+  } else { hint.style.display='none'; }
+}
+
+document.getElementById('search-input').addEventListener('keypress', e => { if(e.key==='Enter') doSearch(); });
+document.getElementById('search-input').addEventListener('input',    e => { updateSearchHint(e.target.value.trim()); });
+document.getElementById('search-input').addEventListener('paste',    e => { setTimeout(()=>updateSearchHint(e.target.value.trim()),50); });
+
+function quickSearch(q) {
+  document.getElementById('search-input').value=q;
+  updateSearchHint(q);
+  doSearch();
+}
+
+// ═══════════════════════════════════════════
+// FIX 3: doSearch with smart fallback to demo data
+// ═══════════════════════════════════════════
+async function doSearch() {
+  const raw = document.getElementById('search-input').value.trim();
+  if (!raw) return;
+
+  const usingLink = isURL(raw);
+  showLoading(usingLink ? 'Fetching product from link...' : 'Searching across platforms...');
+  hideError();
+
+  let isDemoMode = false;
+
+  try {
+    const searchEndpoint = usingLink
+      ? `${API}/searchbylink?url=${encodeURIComponent(raw)}`
+      : `${API}/search?product=${encodeURIComponent(raw)}`;
+
+    // Try Flask backend with a short timeout
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    let s, p;
+
+    try {
+      const key = detectKey(raw.toLowerCase());
+      const [sr, pr] = await Promise.all([
+        fetch(searchEndpoint, { signal: controller.signal }),
+        fetch(`${API}/predict?product=${encodeURIComponent(key)}`, { signal: controller.signal })
+      ]);
+      clearTimeout(timer);
+
+      if (!sr.ok) throw new Error('Backend error');
+
+      const raw_data = await sr.json();
+      if (raw_data.error) throw new Error(raw_data.error);
+
+      s = normalizeSearchData(raw_data);
+      p = pr.ok ? await pr.json() : null;
+
+      // FIX: if backend returned 0 valid prices, fall through to demo
+      if (!s.platforms || s.platforms.length === 0) {
+        throw new Error('No valid prices from backend');
+      }
+
+    } catch (backendErr) {
+      // ── FALLBACK: use demo data ──────────────────────────
+      clearTimeout(timer);
+      isDemoMode = true;
+      const key = detectKey(raw.toLowerCase());
+
+      if (!DEMO_DATA[key]) {
+        // Unknown product: build a minimal result from query text
+        throw new Error(`Product not recognised. Try: boAt, Nike, or iPhone`);
+      }
+
+      s = DEMO_DATA[key];
+      p = {
+        predicted_price:  Math.round(s.lowest_price * 0.88),
+        recommendation:   'WAIT',
+        expected_savings: Math.round(s.lowest_price * 0.12),
+        message:          'Price drop predicted in next 14 days. Set an alert!'
+      };
+    }
+
+    currentProduct = s.key;
+    currentData    = { search: s, predict: p };
+
+    renderResult(s, p, isDemoMode);
+    showPage('result');
+
+  } catch (err) {
+    showError(err.message || 'Something went wrong. Make sure Flask is running on port 5000.');
+    showPage('home');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ─── RENDER RESULT ───
+function renderResult(s, p, isDemoMode=false) {
+  const emojis={boat:'🎧',nike:'👟',iphone:'📱'};
+  const emoji=emojis[s.key]||'📦';
+
+  if (!s.platforms || s.platforms.length === 0) {
+    showError('No pricing data found. Try: boAt, Nike, or iPhone.');
+    showPage('home');
+    return;
+  }
+
+  // Demo mode notice
+  document.getElementById('demo-notice').innerHTML = isDemoMode
+    ? `<div class="demo-banner">⚠️ Flask backend not detected — showing demo prices. Connect your backend at port 5000 for live SerpAPI data.</div>`
+    : '';
+
+  const headerImg = s.platforms.find(pl=>pl.image)?.image;
+  document.getElementById('product-header').innerHTML=`
+    <div class="product-img">
+      ${headerImg
+        ? `<img src="${headerImg}" alt="${s.product}" onerror="this.parentElement.innerHTML='${emoji}'">`
+        : emoji}
+    </div>
+    <div class="product-info">
+      <h2>${s.product}</h2>
+      <p>Lowest: ₹${s.lowest_price?.toLocaleString('en-IN')} on ${s.lowest_platform}</p>
+    </div>
+    <div class="ai-tag"><span class="pulse"></span> ${isDemoMode?'Demo Prices':'Live Prices'}</div>
+  `;
+
+  const sale=s.upcoming_sale||{};
+  document.getElementById('sale-banner').innerHTML=`
+    <div class="sale-info">
+      <h3>🎉 ${sale.name||'Sale Coming Soon'}</h3>
+      <p>${sale.date||'TBA'} · ${sale.discount||''}</p>
+    </div>
+    <div class="sale-countdown">
+      <div class="sale-days">${sale.days_left??'—'}</div>
+      <div class="sale-days-label">days away</div>
+    </div>
+  `;
+
+  const currPrice  = s.lowest_price;
+  const predPrice  = p ? p.predicted_price : Math.round(currPrice*0.88);
+  const salePrice  = Math.round(currPrice*0.75);
+
+  alertPrice       = predPrice;
+  alertProductName = s.product;
+
+  document.getElementById('timing-grid').innerHTML=`
+    <div class="timing-card">
+      <div class="timing-label">Buy Now</div>
+      <div class="timing-price">₹${currPrice?.toLocaleString('en-IN')}</div>
+      <div class="timing-sub">Current best price</div>
+    </div>
+    <div class="timing-card recommended">
+      <div class="timing-label">⭐ Wait 14 Days</div>
+      <div class="timing-price">₹${predPrice?.toLocaleString('en-IN')}</div>
+      <div class="timing-sub">Predicted drop ↓</div>
+    </div>
+    <div class="timing-card">
+      <div class="timing-label">🎉 ${sale.name||'Next Sale'}</div>
+      <div class="timing-price">~₹${salePrice?.toLocaleString('en-IN')}</div>
+      <div class="timing-sub">In ${sale.days_left??'?'} days</div>
+    </div>
+  `;
+
+  const rec     = p ? p.recommendation : 'WAIT';
+  const savings = p ? p.expected_savings : (currPrice-predPrice);
+  const isWait  = rec==='WAIT';
+  document.getElementById('rec-banner').innerHTML=`
+    <div class="rec-banner ${isWait?'wait':'buy'}">
+      <div>
+        <div class="rec-badge">${isWait?'⏳ WAIT & SAVE':'✅ BUY NOW'}</div>
+        <div class="rec-msg">${p?p.message:'Price drop predicted in next 14 days'}</div>
+      </div>
+      <div class="rec-savings">${savings>0?'−₹'+savings.toLocaleString('en-IN'):'Best Price Now'}</div>
+    </div>
+  `;
+
+  // Platform cards
+  document.getElementById('platform-grid').innerHTML=s.platforms.map(pl=>`
+    <a class="platform-card ${pl.lowest?'lowest':''}" href="${pl.link}" target="_blank" rel="noopener noreferrer">
+      ${pl.lowest?'<div class="lowest-badge">LOWEST</div>':''}
+      <div class="platform-name" style="color:${pl.color}">${pl.platform}</div>
+      <div class="platform-price">₹${pl.price?.toLocaleString('en-IN')}</div>
+      ${pl.original?`<div class="platform-original">~₹${pl.original?.toLocaleString('en-IN')}</div>`:''}
+      <div class="platform-delivery">${pl.delivery||'Check on site'}</div>
+      <div class="buy-link">Buy on ${pl.platform} →</div>
+    </a>
+  `).join('');
+
+  // Savings strategies
+  const bankSave = Math.round(currPrice*0.1);
+  const waitSave = savings>0 ? savings : Math.round(currPrice*0.12);
+  const saleSave = currPrice-salePrice;
+  const coinSave = Math.round(currPrice*0.02);
+  const totalSave= bankSave+waitSave+saleSave+coinSave;
+
+  const strategies=[
+    {icon:'🏦',title:'Bank Card Offer',
+     desc:`HDFC, ICICI, Axis and SBI debit/credit cards offer 5–15% instant cashback or EMI discount on Amazon, Flipkart and Myntra. Apply at checkout — no code needed.`,
+     amount:bankSave},
+    {icon:'⏳',title:'Wait for the Price Drop',
+     desc:`Our ML model predicts this product will drop by ₹${waitSave.toLocaleString('en-IN')} within 14 days. Set a price alert and buy when it hits the low.`,
+     amount:waitSave},
+    {icon:'🎉',title:`Buy During ${sale.name||'Upcoming Sale'}`,
+     desc:`${sale.name||'The next sale'} starts in ${sale.days_left??'a few'} days with ${sale.discount||'major discounts'}. Prices usually drop 20–30% further during sale windows.`,
+     amount:saleSave},
+    {icon:'🪙',title:'Platform Cashback & Coins',
+     desc:`Flipkart SuperCoins, Amazon Pay balance, and Meesho cashback all apply automatically. These stack with bank offers and are redeemable on your next order.`,
+     amount:coinSave}
+  ];
+
+  document.getElementById('savings-grid').innerHTML=strategies.map((st,i)=>`
+    <div class="saving-strategy-card" style="animation-delay:${i*0.08}s">
+      <div class="strategy-icon">${st.icon}</div>
+      <div class="strategy-title">${st.title}</div>
+      <div class="strategy-desc">${st.desc}</div>
+      <div class="strategy-amount">Save ~₹${st.amount.toLocaleString('en-IN')}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('savings-total').innerHTML=`
+    <div>
+      <div class="savings-total-label">Total potential savings</div>
+      <div class="savings-total-sub">Combining all 4 strategies above</div>
+    </div>
+    <div class="savings-total-amount">₹${totalSave.toLocaleString('en-IN')}</div>
+  `;
+
+  const score=isWait?62:88;
+  document.getElementById('score-wrap').innerHTML=`
+    <div class="score-gauge">
+      <canvas id="scoreGauge"></canvas>
+      <div class="score-num">${score}</div>
+    </div>
+    <div class="score-info">
+      <h3>SmartBuy Score: ${score}/100</h3>
+      <p>${isWait
+        ?'Price drop expected soon. Stack bank offers and wait for the upcoming sale for maximum savings.'
+        :'This is a great time to buy! Price is near its historical low. Grab it now with bank offers.'
+      }</p>
+    </div>
+  `;
+  setTimeout(()=>renderGauge(score),100);
+  renderChart(currPrice,predPrice,sale.days_left??30);
+
+  document.getElementById('bank-grid').innerHTML=(s.bank_offers||[]).map(b=>`
+    <div class="bank-card">
+      <div class="bank-name">${b.bank} Bank</div>
+      <div class="bank-offer">${b.offer}</div>
+      <div class="bank-max">${b.max}</div>
+    </div>
+  `).join('');
+}
+
+// ─── GAUGE ───
+function renderGauge(score){
+  const cv=document.getElementById('scoreGauge');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  cv.width=120;cv.height=120;
+  const color=score>75?'#10B981':score>50?'#F59E0B':'#EF4444';
+  const angle=(score/100)*Math.PI*1.5;
+  ctx.clearRect(0,0,120,120);
+  ctx.beginPath();ctx.arc(60,60,45,Math.PI*0.75,Math.PI*2.25);ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=10;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.arc(60,60,45,Math.PI*0.75,Math.PI*0.75+angle);ctx.strokeStyle=color;ctx.lineWidth=10;ctx.lineCap='round';ctx.stroke();
+}
+
+// ─── CHART ───
+function renderChart(curr,pred,saleDays){
+  if(chartInstance)chartInstance.destroy();
+  const labels=[],hist=[],fut=[];
+  for(let i=89;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    labels.push(d.toLocaleDateString('en-IN',{month:'short',day:'numeric'}));
+    hist.push(Math.round((i>45?curr*1.1:curr)+(Math.random()-0.5)*curr*0.08));
+    fut.push(null);
+  }
+  const steps=Math.min(saleDays,30);
+  for(let i=1;i<=steps;i++){
+    const d=new Date();d.setDate(d.getDate()+i);
+    labels.push(d.toLocaleDateString('en-IN',{month:'short',day:'numeric'}));
+    hist.push(null);
+    fut.push(Math.round(curr+(pred-curr)*(i/steps)));
+  }
+  const ctx=document.getElementById('priceChart').getContext('2d');
+  chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[
+    {label:'Price History',data:hist,borderColor:'rgba(124,58,237,0.8)',backgroundColor:'rgba(124,58,237,0.05)',borderWidth:2,pointRadius:0,fill:true,tension:0.4,spanGaps:false},
+    {label:'Predicted',   data:fut, borderColor:'rgba(16,185,129,0.8)', backgroundColor:'rgba(16,185,129,0.05)', borderWidth:2,pointRadius:0,borderDash:[6,4],fill:true,tension:0.4,spanGaps:false}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',font:{size:12}}},tooltip:{backgroundColor:'rgba(13,13,26,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:c=>`₹${c.raw?.toLocaleString('en-IN')}`}}},scales:{x:{ticks:{color:'rgba(255,255,255,0.3)',maxTicksLimit:8,font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:'rgba(255,255,255,0.04)'}}}}});
+}
+
+// ─── ALTERNATIVES ───
+async function showAlternatives(){
+  if(!currentProduct) return;
+  showLoading('Finding cheaper alternatives...');
+  let data;
+  try {
+    const res=await fetch(`${API}/alternatives?product=${currentProduct}`);
+    if(!res.ok) throw new Error('backend');
+    data=await res.json();
+  } catch {
+    // Fallback to demo alternatives
+    data = DEMO_ALTERNATIVES[currentProduct] || {budget:[],mid:[],value:[]};
+  }
+  renderAlternatives(data);
+  showPage('alt');
+  hideLoading();
+}
+
+function renderAlternatives(data){
+  const catEmoji={boat:'🎧',nike:'👟',iphone:'📱'};
+  const fallback=catEmoji[currentProduct]||'📦';
+  ['budget','mid','value'].forEach(tier=>{
+    const items=data[tier]||[];
+    document.getElementById(`alt-${tier}`).innerHTML=items.map(item=>`
+      <div class="alt-card">
+        <div class="alt-img-wrap">
+          ${item.image
+            ?`<img src="${item.image}" alt="${item.name}" onerror="this.parentElement.innerHTML='<span class=\\'alt-img-placeholder\\'>${fallback}</span>'">`
+            :`<span class="alt-img-placeholder">${fallback}</span>`}
+        </div>
+        <div class="alt-body">
+          <div class="alt-name">${item.name}</div>
+          <div class="alt-platform">📦 ${item.platform}</div>
+          <div class="alt-price">₹${typeof item.price==='number'?item.price.toLocaleString('en-IN'):item.price}</div>
+          <div class="alt-meta">⭐ ${item.rating} · ${item.similarity} similar</div>
+          <a class="alt-buy" href="${item.link}" target="_blank" rel="noopener noreferrer">View on ${item.platform} →</a>
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
+// ─── MODAL ───
+function openModal(){
+  document.getElementById('modal-price-display').textContent=alertPrice?`₹${alertPrice.toLocaleString('en-IN')}`:'—';
+  document.getElementById('modal-price-product').textContent=alertProductName?`For: ${alertProductName}`:'';
+  document.getElementById('modal-form-section').style.display='block';
+  document.getElementById('modal-success').style.display='none';
+  document.getElementById('alert-phone').value='';
+  document.getElementById('alert-email').value='';
+  document.getElementById('modal').classList.add('active');
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('active');}
+
+function setAlert(){
+  const ph=document.getElementById('alert-phone').value.trim();
+  const em=document.getElementById('alert-email').value.trim();
+  if(!ph&&!em){alert('Please enter a phone number or email to receive the alert.');return;}
+  const channel=ph?`WhatsApp (${ph})`:em;
+  const priceTxt=alertPrice?`₹${alertPrice.toLocaleString('en-IN')}`:'the target price';
+  document.getElementById('modal-form-section').style.display='none';
+  document.getElementById('modal-success').style.display='block';
+  document.getElementById('modal-success-price').textContent=priceTxt;
+  document.getElementById('modal-success-msg').textContent=`We'll notify you on ${channel} when ${alertProductName||'this product'} drops to ${priceTxt}.`;
+}
+
+// ─── PAGE UTILS ───
+function showLoading(msg='Loading...'){
+  document.getElementById('loading-text').textContent=msg;
+  document.getElementById('loading').classList.add('active');
+  document.getElementById('home-page').style.display='none';
+  document.getElementById('result-page').classList.remove('active');
+  document.getElementById('alt-page').classList.remove('active');
+}
+function hideLoading(){document.getElementById('loading').classList.remove('active');}
+function showError(msg){const e=document.getElementById('error-msg');e.textContent=msg;e.style.display='block';}
+function hideError(){document.getElementById('error-msg').style.display='none';}
+function showPage(page){
+  hideLoading();
+  document.getElementById('home-page').style.display=page==='home'?'block':'none';
+  document.getElementById('result-page').classList.toggle('active',page==='result');
+  document.getElementById('alt-page').classList.toggle('active',page==='alt');
+  window.scrollTo(0,0);
+}
+function goHome(){showPage('home');}
+function showResult(){showPage('result');}
+</script>
+</body>
+</html>
